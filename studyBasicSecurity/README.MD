@@ -243,3 +243,103 @@ protected void configure(HttpSecurity http) throws Exception {
         // Stateless - 시큐리가 생성하지 않고 사용하지도 않음
 }
 ```
+##### 세션 제어 필터
+
+__SessionManagementFilter__
+
+__ConcurrentSessionFilter__
+
+동시 세션 제어  
+* 매 요청 마다 현재 사용자의 세션 만료 여부 체크
+* 세션이 만료되었을 경우 즉시 만료 처리
+
+* `session.isExpired() == true`
+  * 로그아웃 처리
+  * 즉시 오류 페이지 응답  
+    > This session has been expired
+---
+#### 권한 설정과 표현식
+
+* 선언적 방식
+  * URL
+    * `http.antMatcher("/users/**").hasRole("USER")`
+  * Method
+    * ```java
+      @PreAuthorize("hasRole('USER')")
+      public void user() { System.out.println("user");}
+      ``` 
+* 동적 방식
+  * URL
+  * Method
+
+##### 권한 설정
+
+__URL__ 방식
+```java
+//설정시 구체적인 경로가 먼저오고 그것 보다 큰 범위의 경로가 뒤에 오도록 설정해야 함.
+protected void configure(HttpSecurity http) throws Exception {
+    http
+        .antMatcher("/shop/**")
+        .authorizeRequests()
+            .antMatchers("/shop/login", "/shop/users/**").permitAll()
+            .antMatchers("/shop/mypage").hasRole("USER")
+            .antMatchers("/shop/admin/pay").access("hasRole('ADMIN')")
+            .antMatchers("/shop/admin/**").access("hasRole('ADMIN') or hasRole('SYS')")
+            .anyRequest().authenticated();
+}
+```
+
+__Method__ 방식
+
+`authenticated()` - 인증된 사용자의 접근을 허용  
+`fullyAuthenticated()` - 인증된 사용자의 접근을 허용, rememberMe 인증 제외  
+`permitAll()` - 무조건 접근을 허용  
+`denyAll()` - 무조건 접근을 허용하지 않음  
+`anonymous()` - 익명사용자의 접근을 허용  
+`rememberMe()` - 기억하기를 통해 인증된 사용자의 접근을 허용  
+`access(String)` - 주어진 SpEL 표현식의 평가 결과가 true이면 접근을 허용  
+`hasRole(String)` - 사용자가 주어진 역활이 있다면 접근을 허용  
+`hasAuthority(String)` - 사용자가 주어진 권한이 있다면  
+`hasAnyRole(String...)` - 사용자가 주어진 권한이 있다면 접근을 허용  
+`hasAnyAUthority(String...)` - 사용자가 주어진 권한 중 어떤 것이라도 있다면 접근을 허용  
+`hasIpAddress(String)` - 주어진 IP로부터 요청이 왔다면 접근을 허용  
+
+---
+#### 예외 처리 및 요청 캐시 필터 - `ExceptionTranslationFilter`
+
+`FilterSecurityIntercepter` 맨 마지막에 위치한 인터셉터로 인증 및 인가 예외 발생
+
+__AuthenticationException__  
+* 인증 예외 처리
+  1. `AuthenticationEntryPoint` 호출
+      * 로그인 페이지 이동, 401 오류 코드 전달 등
+  2. 인증 예외가 발생하기 전의 요청 정보를 저장
+      * `RequestCache` - 사용자의 이전 요청 정보를 세션에 저장하고 이를 꺼내오는 캐시.
+        * `SavedRequest` - 사용자가 요청했던 request 파라미터 값들,   
+                          그 당시의 헤더값들 등이 저장
+
+__AccessDeniedException__
+  * 인가 예외 처리
+    * `AccessDeniedHandler` 에서 예외 처리하도록 제공
+  
+```java
+protected void configure(HttpSecurity http) throws Exception {
+    http.exceptionHandling()
+        .authenticationEntryPoint(authenticationEntryPoint()) // 인증 실패시 처리
+        .accessDeniedHandler(accessDeniedHandler())           // 인가 실패시 처리
+}
+```
+----
+#### CSRF, CsrfFilter
+
+사용자간 요청 위조 방지.
+
+모든 요청에 대해 랜덤하게 생성된 토큰을 HTTP 파라미터로 요구
+요청 시 전달되는 토큰 값과 서버에 저장된 실제 값ㅇ과 비교한 후 만약 일치하지 않으면 요청은 실패한다.
+
+* Client
+    * `<input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />`
+    * HTTP 메소드 - PATCH, POST, PUT, DELETE
+* Spring Security
+    * `http.csrf()` - 기본 활성화
+    * `http.csrf().disabled()` - 비활성화
