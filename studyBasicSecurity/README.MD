@@ -372,6 +372,7 @@ protected void configure(HttpSecurity http) throws Exception {
 5. 사용자 정의 필터를 생성해서 기존의 필터 전, 후로 추가 가능
     * 필터의 순서를 잘 정의해야함.
 6. 마지막 필터까지 인증 및 인가 예외가 발생하지 않으면 보안 통과
+---
 
 ### 필터 초기화와 다중 보안 설정
 
@@ -410,3 +411,36 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 }
 ```
+---
+### Authentication
+
+인증, 인증 주체
+
+__당신이 누구인지 증명하는 것__
+
+* 사용자의 인증 정보를 저장하는 토큰 개념
+* 인증 시 `id` 와 `password` 를 담고 인증 검증을 위해 전달되어 사용된다
+* 인증 후 최종 인증 결과 (`user` 객체, 권한 정보) 를 담고 `SecurityContext` 에 저장되어 전역적으로 참조가 가능하다
+    * `Authentication authentication = SecurityContextHolder.getContext().getAuthentication()`
+    1. `principal` : 사용자 아이디 혹은 User 객체를 저장
+    2. `credentials` : 사용자 비밀번호
+    3. `authorities` : 인증된 사용자의 권한 목록
+    4. `details` : 인증 부가 정보
+    5. `Authenticated` : 인증 여부
+    
+---
+### SecurityContextHolder, SecurityContext
+
+`SecurityContext`
+* `Authentication` 객체가 저장되는 보관소로 필요시 언제든지 `Authentication` 객체를 꺼내어 쓸 수 있도록 제공되는 클래스
+* `ThreadLocal` 에 저장되어 아무 곳에서나 참조가 가능하도록 설계함
+* 인증이 완료되면 `HttpSession` 에 저장되어 어플리케이션 전반에 걸쳐 전역적인 참조가 가능하다
+
+`SecurityContextHolder`
+* `SecurityContext` 객체 저장방식
+    * `MODE_THREADLOCAL` - 쓰레드당 `SecurityContext` 객체를 할당, __기본값__
+    * `MODE_INHERITABLETHREADLOCAL` - 메인 스레드와 자식 스레드에 관하여 동일한 `SecurityContext` 를 유지
+    * `MODE_GLOBAL` - 응용 프로그램에서 단 하나의 `SecurityContext`를 저장한다
+* `SecurityCOntextHolder.clearContext()` - `SecurityContext` 기존 정보 초기화  
+
+* `Authentication authentication = SecurityContextHolder.getContext().getAuthentication()`
