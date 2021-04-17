@@ -441,6 +441,106 @@ __당신이 누구인지 증명하는 것__
     * `MODE_THREADLOCAL` - 쓰레드당 `SecurityContext` 객체를 할당, __기본값__
     * `MODE_INHERITABLETHREADLOCAL` - 메인 스레드와 자식 스레드에 관하여 동일한 `SecurityContext` 를 유지
     * `MODE_GLOBAL` - 응용 프로그램에서 단 하나의 `SecurityContext`를 저장한다
-* `SecurityCOntextHolder.clearContext()` - `SecurityContext` 기존 정보 초기화  
+* `SecurityContextHolder.clearContext()` - `SecurityContext` 기존 정보 초기화  
 
 * `Authentication authentication = SecurityContextHolder.getContext().getAuthentication()`
+
+---
+### SecurityContextPersistenceFilter
+
+`SecurityContext` 객체의 생성, 저장, 조회
+
+* 익명사용자
+    * 새로운 `SecurityContext` 객체를 생성하여 `SecurityContextHolder`에 저장
+    * `AnonymousAuthenticationFilter` 에서 `AnonymousAuthenticationToken` 객체를 `SecurityContext` 에 저장
+* 인증시
+    * 새로운 `SecurityContext` 객체를 생성하여 `SecurityContextHolder` 에 저장
+    * `UsernamePassowrdAUthenticationFilter` 에서 인증 성공 후 `SecurityContext`에 `UsernamePasswordAuthentication` 객체를 `SecurityContext`에 저장
+    * 인증이 최종 완료되면 `Session`에 `SecurityContext`를 저장
+* 인증후
+    * `Session`에서 `SecurityContext` 꺼내어 `SecurityContextHolder`에서 저장
+    * `SecurityContext` 안에 `Authentication` 객체가 존재하면 계속 인증을 유지한다.
+* 최종 응답시 공통
+    * `SecurityContextHolder.clearContext()`
+    
+---
+### Authentication Flow
+
+![img.png](static/images/authentication_flow.png)
+
+---
+### AuthenticationManager
+
+![img.png](static/images/authenticationManager.png)
+
+* `AuthenticationProvider` 목록 중에서 인증 처리 요건에 맞는 `AuthenticationProvider`를 찾아 인증처리를 위임한다
+* 부모 `ProviderManager`를 설정하여 `AuthenticationProvider`를 계속 탐색 할 수 있다
+
+---
+### AuthenticationProvider
+
+![img.png](static/images/authenticationProvider.png)
+
+---
+### Authorization
+
+__당신에게 무엇이 허가 되었는지 증명하는 것__
+
+시큐리티가 지원하는 권한 계층
+* 웹 계층
+    * URL 요청에 따른 메뉴 혹은 화면 단위의 레벨 보안
+* 서비스 계층
+    * 화면 단위가 아닌 메소드 같은 기능 단위의 레벨 보안
+* 도메인 계층 (Access Control List, 접근 제어 목록)
+    * 객체 단위의 레벨 보안
+
+### FilterSecurityInterceptor
+
+* 마지막에 위치한 필터로써 인증된 사용자에 대해 특정 요청의 승인/거부 여부를 최종적으로 결정
+* 인증 객체 없이 보호 자원에 접근을 시도할 경우 `AuthenticationException`을 발생
+* 인증 후 자원에 접근 가능한 권한이 존재하지 않을 경우 `AccessDeninedException`을 발생
+* 권한 제어 방식 중 HTTP 자원의 보안을 처리하는 필터
+* 권한 처리를 `AccessDecisionManager`에게 맡김
+
+![img.png](static/images/FIlterSecurityInterceptor_01.png)
+
+![img.png](static/images/FIlterSecurityInterceptor_02.png)
+___
+
+### AccessDecisionManager
+
+* 인증 정보, 요청 정보, 권한 정보를 이용해서 사용자의 자원 접근을 허용할 것인지 거부할 것인지를 최종 결정하는 주체
+* 여러 개의 `Voter`들을 가질 수 있으며 `Voter`들로부터 접근허용, 거부, 보류에 해당하는 각각의 값을 리턴받고 판단 및 결정
+* 최종 접근 거부 시 예외 발생
+
+* __접근 결정의 세가지 유형__
+    * `AffirmativeBased`
+        * 여러개의 `Voter` 클래스 중 하나라도 접근 허가로 결론을 내면 접근 허가로 판단한다
+    * `ConsensusBased`
+        * 다수표(승인 및 거부) 에 의해 최종 결정을 판단한다
+        * 동수일 경우 기본은 접근 허가이나 `allowIfEqualGrantedDeninedDecisions`을 `false`로 설정할 경우 접근 거부로 결정
+    * `UnanimousBased`
+        * 모든 보터가 만장일치로 접근을 승인해야 하면, 그렇지 않을 경우 접근 거부
+    
+---
+### AccessDecisionVoter
+
+* 판단을 심사하는 것
+
+* `Voter`가 권한 부여 과정에서 판단하는 자료
+    * `Authentication` - 인증정보 (`user`)
+    * `FilterInvocation` - 요청 정보 (`antMatcher("/user")`)
+    * `ConfigAttributes` - 권한 정보 (`hasRole("USER")`)
+    
+* 결정 방식
+    * `ACCESS_GRANTED` - 접근 허용 (1)
+    * `ACCESS_DENINED` - 접근 거부 (0)
+    * `ACCESS_ABSTAIN` - 접근 보류 (-1)
+        * `Voter`가 해당 타입의 요청에 대해 결정을 내릴 수 없는 경우
+    
+![img.png](static/images/accessDecision.png)
+
+---
+#### 전체 아키텍쳐
+
+![img.png](static/images/securityAchitecture.png)
