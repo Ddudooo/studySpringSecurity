@@ -3,6 +3,7 @@ package study.studysecurity.global.config.security.config;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,6 +23,7 @@ import study.studysecurity.global.config.security.handler.CustomAuthenticationSu
 import study.studysecurity.global.config.security.provider.CustomAuthenticationProvider;
 import study.studysecurity.global.config.security.service.CustomUserDetailService;
 
+@Order(1)
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
@@ -92,5 +94,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			.and()
 			.exceptionHandling()
 			.accessDeniedHandler(accessDeniedHandler);
+			
 	}
+
+
 }
